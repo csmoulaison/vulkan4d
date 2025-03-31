@@ -73,12 +73,15 @@ void vk_loop(struct vk_context* vk, struct render_group* render_group)
 			VK_PIPELINE_STAGE_TRANSFER_BIT);
 
 		VkRenderingAttachmentInfo color_attachment = {};
-		color_attachment.sType            = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO;
-		color_attachment.imageView        = vk->swap_views[image_idx];
-		color_attachment.loadOp           = VK_ATTACHMENT_LOAD_OP_CLEAR;
-		color_attachment.storeOp          = VK_ATTACHMENT_STORE_OP_STORE;
-		color_attachment.imageLayout      = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-		color_attachment.clearValue.color = 
+		color_attachment.sType              = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO;
+		color_attachment.loadOp             = VK_ATTACHMENT_LOAD_OP_CLEAR;
+		color_attachment.storeOp            = VK_ATTACHMENT_STORE_OP_STORE;
+		color_attachment.imageLayout        = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+		color_attachment.imageView          = vk->render_view;
+		color_attachment.resolveMode        = VK_RESOLVE_MODE_AVERAGE_BIT;
+		color_attachment.resolveImageView   = vk->swap_views[image_idx];
+		color_attachment.resolveImageLayout = VK_IMAGE_LAYOUT_GENERAL;
+		color_attachment.clearValue.color   = 
 			(VkClearColorValue)
 			{{
 				render_group->clear_color.r, 

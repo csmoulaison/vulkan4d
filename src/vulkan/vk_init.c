@@ -36,6 +36,24 @@ VkShaderModule vk_create_shader_module(VkDevice device, const char* fname)
 	return module;
 }
 
+uint32_t vk_get_memory_type(struct vk_context* vk, uint32_t type_filter, VkMemoryPropertyFlags properties)
+{
+	VkPhysicalDeviceMemoryProperties mem_properties;
+	vkGetPhysicalDeviceMemoryProperties(vk->physical_device, &mem_properties);
+	
+	for(uint32_t i = 0; i < mem_properties.memoryTypeCount; i++)
+	{
+		if((type_filter & (1 << i)) && (mem_properties.memoryTypes[i].propertyFlags & properties) == properties)
+		{
+			return i;
+		}
+	}
+
+	printf("Failed to find suitable memory type for buffer.\n");
+	PANIC();
+	return 0;
+}
+
 void vk_allocate_buffer(
 	struct vk_context* vk,
 	VkBuffer* buffer,
@@ -60,35 +78,21 @@ void vk_allocate_buffer(
 	VkMemoryRequirements mem_reqs;
 	vkGetBufferMemoryRequirements(vk->device, *buffer, &mem_reqs);
 
-	uint32_t mem_type_filter = mem_reqs.memoryTypeBits;
-
 	VkPhysicalDeviceMemoryProperties mem_properties;
 	vkGetPhysicalDeviceMemoryProperties(vk->physical_device, &mem_properties);
-
-	uint32_t mem_type_idx = UINT32_MAX;
-	for(uint32_t i = 0; i < mem_properties.memoryTypeCount; i++)
-	{
-		if((mem_type_filter & (1 << i)) && (mem_properties.memoryTypes[i].propertyFlags & properties) == properties)
-		{
-			mem_type_idx = i;
-			break;
-		}
-	}
-	if(mem_type_idx == UINT32_MAX)
-	{
-		printf("Failed to find suitable memory type for vertex buffer.\n");
-		PANIC();
-	}
 
 	VkMemoryAllocateInfo alloc_info = {};
 	alloc_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
 	alloc_info.allocationSize = mem_reqs.size;
-	alloc_info.memoryTypeIndex = mem_type_idx;
+	alloc_info.memoryTypeIndex = vk_get_memory_type(
+		vk,
+		mem_reqs.memoryTypeBits, 
+		VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
 
 	res = vkAllocateMemory(vk->device, &alloc_info, 0, memory);
 	if(res != VK_SUCCESS)
 	{
-		printf("Error %i: Failed to allocate vertex buffer memory.\n", res);
+		printf("Error %i: Failed to allocate buffer memory.\n", res);
 	}
 	vkBindBufferMemory(vk->device, *buffer, *memory, 0);
 }
@@ -105,6 +109,10 @@ struct vk_create_swapchain_result vk_create_swapchain(struct vk_context* vk, boo
 			vkDestroyImageView(vk->device, vk->swap_views[i], 0);
 		}
 		vkDestroySwapchainKHR(vk->device, vk->swapchain, 0);
+
+		vkDestroyImage(vk->device, vk->render_image, 0);
+		vkDestroyImageView(vk->device, vk->render_view, 0);
+		vkFreeMemory(vk->device, vk->render_image_memory, 0);
 	}
 
 	// Query surface capabilities.
@@ -229,7 +237,6 @@ struct vk_create_swapchain_result vk_create_swapchain(struct vk_context* vk, boo
 		PANIC();
 	}
 
-
 	// Get swapchain images
 	res = vkGetSwapchainImagesKHR(vk->device, vk->swapchain, &vk->swap_images_len, 0);
 	if(res != VK_SUCCESS) 
@@ -250,15 +257,9 @@ struct vk_create_swapchain_result vk_create_swapchain(struct vk_context* vk, boo
 	{
 		VkImageViewCreateInfo info = {};
 		info.sType                           = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
-		info.pNext                           = 0;
-		info.flags                           = 0;
 		info.image                           = vk->swap_images[i];
 		info.viewType                        = VK_IMAGE_VIEW_TYPE_2D;
 		info.format                          = result.surface_format.format;
-		info.components.r                    = VK_COMPONENT_SWIZZLE_IDENTITY;
-		info.components.g                    = VK_COMPONENT_SWIZZLE_IDENTITY;
-		info.components.b                    = VK_COMPONENT_SWIZZLE_IDENTITY;
-		info.components.a                    = VK_COMPONENT_SWIZZLE_IDENTITY;
 		info.subresourceRange.aspectMask     = VK_IMAGE_ASPECT_COLOR_BIT;
 		info.subresourceRange.baseMipLevel   = 0;
 		info.subresourceRange.levelCount     = 1;
@@ -271,6 +272,67 @@ struct vk_create_swapchain_result vk_create_swapchain(struct vk_context* vk, boo
 			printf("Error %i: Failed to create image views.\n", res);
 			PANIC();
 		}
+	}
+
+	// Create render image view for multisampling
+	VkImageCreateInfo render_info = {};
+	render_info.imageType     = VK_IMAGE_TYPE_2D;
+	render_info.format        = result.surface_format.format;
+	render_info.extent        = (VkExtent3D){vk->swap_extent.width, vk->swap_extent.height, 1};
+	render_info.mipLevels     = 1;
+	render_info.arrayLayers   = 1;
+	render_info.samples       = vk->render_samples;
+	render_info.tiling        = VK_IMAGE_TILING_OPTIMAL;
+	render_info.usage         = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
+	render_info.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+
+	res = vkCreateImage(vk->device, &render_info, 0, &vk->render_image);
+	if(res != VK_SUCCESS) 
+	{
+		printf("Error %i: Failed to create render image.\n", res);
+		PANIC();
+	}
+
+	VkMemoryRequirements mem_reqs = {};
+	vkGetImageMemoryRequirements(vk->device, vk->render_image, &mem_reqs);
+
+	VkMemoryAllocateInfo alloc_info = {};
+	alloc_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+	alloc_info.allocationSize = mem_reqs.size;
+	alloc_info.memoryTypeIndex = vk_get_memory_type(
+		vk,
+		mem_reqs.memoryTypeBits, 
+		VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+
+	res = vkAllocateMemory(vk->device, &alloc_info, 0, &vk->render_image_memory);
+	if(res != VK_SUCCESS) 
+	{
+		printf("Error %i: Failed to allocate render image memory..\n", res);
+		PANIC();
+	}
+	res = vkBindImageMemory(vk->device, vk->render_image, vk->render_image_memory, 0);
+	if(res != VK_SUCCESS) 
+	{
+		printf("Error %i: Failed to bind render image memory.\n", res);
+		PANIC();
+	}
+
+	VkImageViewCreateInfo render_view_info = {};
+	render_view_info.sType                           = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+	render_view_info.image                           = vk->render_image;
+	render_view_info.viewType                        = VK_IMAGE_VIEW_TYPE_2D;
+	render_view_info.format                          = result.surface_format.format;
+	render_view_info.subresourceRange.aspectMask     = VK_IMAGE_ASPECT_COLOR_BIT;
+	render_view_info.subresourceRange.baseMipLevel   = 0;
+	render_view_info.subresourceRange.levelCount     = 1;
+	render_view_info.subresourceRange.baseArrayLayer = 0;
+	render_view_info.subresourceRange.layerCount     = 1;
+
+	res = vkCreateImageView(vk->device, &render_view_info, 0, &vk->render_view);
+	if(res != VK_SUCCESS) 
+	{
+		printf("Error %i: Failed to create render image view.\n", res);
+		PANIC();
 	}
 
 	return result;
@@ -351,7 +413,6 @@ struct vk_context vk_init(struct vk_platform* platform)
 
 	// Create physical device.
 	uint32_t graphics_family_idx = 0;
-	VkSampleCountFlagBits sample_count;
 	{
 		uint32_t devices_len;
 		if(vkEnumeratePhysicalDevices(vk.instance, &devices_len, 0) != VK_SUCCESS) 
@@ -430,31 +491,31 @@ struct vk_context vk_init(struct vk_platform* platform)
 			VkSampleCountFlags sample_counts = properties.limits.framebufferColorSampleCounts; //& properties.limits.framebufferDepthSampleCounts;
 			if(sample_counts & VK_SAMPLE_COUNT_64_BIT) 
 			{ 
-				sample_count = VK_SAMPLE_COUNT_64_BIT; 
+				vk.render_samples = VK_SAMPLE_COUNT_64_BIT; 
 			} 
 			else if(sample_counts & VK_SAMPLE_COUNT_32_BIT)
 			{
-				sample_count = VK_SAMPLE_COUNT_32_BIT; 
+				vk.render_samples = VK_SAMPLE_COUNT_32_BIT; 
 			}
 			else if(sample_counts & VK_SAMPLE_COUNT_16_BIT)
 			{
-				sample_count = VK_SAMPLE_COUNT_16_BIT; 
+				vk.render_samples = VK_SAMPLE_COUNT_16_BIT; 
 			}
 			else if(sample_counts & VK_SAMPLE_COUNT_8_BIT)
 			{
-				sample_count = VK_SAMPLE_COUNT_8_BIT; 
+				vk.render_samples = VK_SAMPLE_COUNT_8_BIT; 
 			}
 			else if(sample_counts & VK_SAMPLE_COUNT_4_BIT)
 			{
-				sample_count = VK_SAMPLE_COUNT_4_BIT; 
+				vk.render_samples = VK_SAMPLE_COUNT_4_BIT; 
 			}
 			else if(sample_counts & VK_SAMPLE_COUNT_2_BIT)
 			{
-				sample_count = VK_SAMPLE_COUNT_2_BIT; 
+				vk.render_samples = VK_SAMPLE_COUNT_2_BIT; 
 			}
 			else
 			{
-				sample_count = VK_SAMPLE_COUNT_1_BIT;
+				vk.render_samples = VK_SAMPLE_COUNT_1_BIT;
 			}
 		}
 
@@ -676,7 +737,7 @@ struct vk_context vk_init(struct vk_platform* platform)
 		VkPipelineMultisampleStateCreateInfo multisample_info = {};
 		multisample_info.sType                 = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
 		multisample_info.sampleShadingEnable   = VK_FALSE;
-		multisample_info.rasterizationSamples  = VK_SAMPLE_COUNT_1_BIT;
+		multisample_info.rasterizationSamples  = vk.render_samples;
 
 		VkPipelineColorBlendAttachmentState color_blend_attachment = {};
 		color_blend_attachment.colorWriteMask = 

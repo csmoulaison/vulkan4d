@@ -51,7 +51,7 @@ void xcb_loop(struct xcb_context* xcb)
 
 		game_loop(&xcb->render_group);
 
-		xcb->render_group.t = xcb->time_since_start;
+		xcb->render_group.t = xcb->time_since_start / 4.0f;
 		vk_loop(&xcb->vk, &xcb->render_group);
 	}
 }

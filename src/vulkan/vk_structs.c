@@ -23,6 +23,13 @@ struct vk_context
 	VkQueue               queue_graphics;
 	VkQueue               queue_present;
 
+	VkImageView           render_view;
+	VkImage               render_image;
+	// TODO - Can this be pulled into device_local_memory, and would that be
+	// inadvisable?
+	VkDeviceMemory        render_image_memory;
+	VkSampleCountFlagBits render_samples;
+
 	VkSwapchainKHR        swapchain;
 	VkExtent2D            swap_extent;
 	VkImageView           swap_views[MAX_SWAP_IMAGES];
