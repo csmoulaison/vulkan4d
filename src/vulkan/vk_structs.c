@@ -1,32 +1,80 @@
-struct vk_per_frame
+// TODO - Our own m4 struct
+// TODO - I figure optimally, we probably want to precompute proj * view every
+// frame as our uniform buffer, then push the model as a push constant.
+struct vk_ubo
 {
-	VkCommandBuffer cmd_buffer;
-	VkSemaphore semaphore_image_available;
-	VkSemaphore semaphore_render_finished;
+	alignas(16) mat4 model;
+	alignas(16) mat4 view;
+	alignas(16) mat4 proj;
+};
+
+struct vk_host_memory
+{
+	struct vk_ubo ubo;
 };
 
 struct vk_context
 {
-	VkInstance instance;
-	VkSurfaceKHR surface;
-	VkPhysicalDevice physical_device;
-	VkDevice device;
+	VkInstance            instance;
+	VkPhysicalDevice      physical_device;
+	VkDevice              device;
+	VkSurfaceKHR          surface;
 
-	//VkQueue queue_compute;
-	VkQueue queue_graphics;
-	VkQueue queue_present;
+	VkQueue               queue_graphics;
+	VkQueue               queue_present;
 
-	VkSwapchainKHR swapchain;
-	VkImage swap_images[MAX_SWAP_IMAGES];
-	VkImageView swap_views[MAX_SWAP_IMAGES];
-	VkExtent2D swap_extent;
-	uint32_t images_len;
+	VkSwapchainKHR        swapchain;
+	VkExtent2D            swap_extent;
+	VkImageView           swap_views[MAX_SWAP_IMAGES];
+	VkImage               swap_images[MAX_SWAP_IMAGES];
+	uint32_t              swap_images_len;
 
-	VkPipelineLayout pipeline_layout;
-	VkPipeline pipeline;
+	VkDescriptorSetLayout descriptor_layout;
+	VkDescriptorPool      descriptor_pool;
+	VkDescriptorSet       descriptor_set;
+	VkPipeline            pipeline;
+	VkPipelineLayout      pipeline_layout;
 
-	VkCommandPool cmd_pool;
+	VkBuffer              device_local_buffer;
+	VkDeviceMemory        device_local_memory;
 
-	uint32_t frame_cur;
-	struct vk_per_frame frames[MAX_IN_FLIGHT_FRAMES];
+	VkBuffer              host_visible_buffer;
+	VkDeviceMemory        host_visible_memory;
+	void*                 host_visible_mapped;
+
+	uint32_t              vertex_buffer_offset;
+	uint32_t              index_buffer_offset;
+
+	VkCommandPool         command_pool;
+	VkCommandBuffer       command_buffer;
+
+	VkSemaphore           semaphore_image_available;
+	VkSemaphore           semaphore_render_finished;
+};
+
+struct vk_platform
+{
+	VkResult(*create_surface_callback)(struct vk_context* vk, void* context);
+	void*   context;
+	char**  window_extensions;
+	uint8_t window_extensions_len;
+};
+
+
+struct vk_create_swapchain_result
+{
+	VkSurfaceFormatKHR surface_format;
+};
+
+struct vk_vertex
+{
+	struct v2 pos;
+	struct v3 color;
+};
+
+#define VERTEX_INPUT_ATTR_LEN 2
+struct vk_vertex_input_descriptions
+{
+	VkVertexInputBindingDescription   binding;
+	VkVertexInputAttributeDescription attributes[VERTEX_INPUT_ATTR_LEN];
 };

@@ -1,3 +1,5 @@
+#define BILLION 1000000000.0f
+
 void xcb_loop(struct xcb_context* xcb)
 {
 	while(xcb->running)
@@ -36,7 +38,20 @@ void xcb_loop(struct xcb_context* xcb)
 				}
 			}
 		}
+
+        struct timespec time_cur;
+        if(clock_gettime(CLOCK_REALTIME, &time_cur))
+        {
+    		PANIC();
+        }
+    	float dt = time_cur.tv_sec - xcb->time_prev.tv_sec + 
+    	(float)time_cur.tv_nsec / BILLION - (float)xcb->time_prev.tv_nsec / BILLION;
+        xcb->time_prev = time_cur;
+    	xcb->time_since_start += dt;
+
 		game_loop(&xcb->render_group);
+
+		xcb->render_group.t = xcb->time_since_start;
 		vk_loop(&xcb->vk, &xcb->render_group);
 	}
 }

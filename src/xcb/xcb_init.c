@@ -1,6 +1,6 @@
-VkResult xcb_create_surface_callback(void* platform_data, struct vk_context* vk)
+VkResult xcb_create_surface_callback(struct vk_context* vk, void* context)
 {
-	struct xcb_context* xcb = (struct xcb_context*)platform_data;
+	struct xcb_context* xcb = (struct xcb_context*)context;
 	
 	VkXcbSurfaceCreateInfoKHR info = {};
 	info.sType      = VK_STRUCTURE_TYPE_XCB_SURFACE_CREATE_INFO_KHR;
@@ -47,32 +47,40 @@ struct xcb_context xcb_init()
 	// This needs to be initialized in order for keysym lookups to work
 	xcb.keysyms = xcb_key_symbols_alloc(xcb.connection);
 
-	// VOLATILE - window_exts_len must equal length of window_exts.
-	uint32_t window_exts_len = 2;
-	char* window_exts[2] = 
-	{
-		"VK_KHR_surface",
-		VK_KHR_XCB_SURFACE_EXTENSION_NAME
-	};
-
 	// TODO - can we get the width and height post window manager resize to pass
 	// to vk_init? Alternatively, don't worry about it and just handle fullscreen.
-	xcb_get_geometry_reply_t* geometry = xcb_get_geometry_reply(
+	/*xcb_get_geometry_reply_t* geometry = xcb_get_geometry_reply(
 		xcb.connection, 
 		xcb_get_geometry(xcb.connection, xcb.window), 
 		0);
 	xcb.window_w = geometry->width;
-	xcb.window_h = geometry->height;
+	xcb.window_h = geometry->height;*/
+
+	// VOLATILE - window_extensions_len must equal length of window_exts.
+	char* window_exts[2] = 
+	{
+		"VK_KHR_surface", // TODO - find relevant _EXTENSION_NAME macro?
+		VK_KHR_XCB_SURFACE_EXTENSION_NAME
+	};
+
+	struct vk_platform xcb_platform;
+	xcb_platform.context = &xcb;
+	xcb_platform.create_surface_callback = xcb_create_surface_callback;
+	xcb_platform.window_extensions_len = 2;
+	xcb_platform.window_extensions = window_exts;
 
 	// TODO - doesn't match by the time we are making swapchain, so have to
 	// hardcode it here. Whyyyyy?
 	// Might have to resort to just waiting until xcb_loop COnfigureNotify to do this.
-	xcb.vk = vk_init(
-		window_exts, 
-		window_exts_len, 
-		xcb_create_surface_callback, 
-		(void*)&xcb);
+	xcb.vk = vk_init(&xcb_platform);
 
 	xcb.running = true;
+
+    if(clock_gettime(CLOCK_REALTIME, &xcb.time_prev))
+    {
+        PANIC();
+    }
+    xcb.time_since_start = 0;
+
 	return xcb;
 }
