@@ -9,10 +9,13 @@ struct xcb_context
 	xcb_window_t        window;
 	uint32_t            window_w;
 	uint32_t            window_h;
+
 	xcb_key_symbols_t*  keysyms;
+	bool 				mouse_just_warped;
+	bool				mouse_moved_yet;
 
 	struct game_memory* memory_pool;
-	size_t memory_pool_bytes;
+	size_t 				memory_pool_bytes;
 
 	struct input_state  input;
 	struct render_group render_group;

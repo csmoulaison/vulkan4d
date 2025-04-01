@@ -17,6 +17,57 @@ void xcb_loop(struct xcb_context* xcb)
 					xcb->window_w = ev->width;
 					xcb->window_h = ev->height;
 				}
+            	case XCB_MOTION_NOTIFY:
+                {
+                    break;
+
+                    // TODO - implement properly
+                    printf("motion notify\n");
+					xcb_motion_notify_event_t* ev = (xcb_motion_notify_event_t*)e;
+                    
+					if(xcb->mouse_just_warped) 
+					{
+    					xcb->mouse_just_warped = 0;
+    					break;
+					}
+                    
+					if(!xcb->mouse_moved_yet) 
+					{
+    					xcb->mouse_moved_yet = 1;
+    					xcb->input.mouse_delta_x = 0;
+    					xcb->input.mouse_delta_y = 0;
+        				xcb->input.mouse_x = ev->event_x;
+    					xcb->input.mouse_y = ev->event_y;
+    					break;
+					}
+
+					xcb->input.mouse_delta_x = ev->event_x - xcb->input.mouse_x;
+					xcb->input.mouse_delta_y = ev->event_y - xcb->input.mouse_y;
+					xcb->input.mouse_x = ev->event_x;
+					xcb->input.mouse_y = ev->event_y;
+
+					int32_t bounds_x = xcb->window_w / 4;
+					int32_t bounds_y = xcb->window_h / 4;
+					if(xcb->input.mouse_x < bounds_x ||
+    					xcb->input.mouse_x > xcb->window_w - bounds_x ||
+    					xcb->input.mouse_y < bounds_y ||
+    					xcb->input.mouse_y > xcb->window_h - bounds_y)
+					{
+    					xcb->mouse_just_warped = 1;
+    					xcb->input.mouse_x = xcb->window_w / 2;
+    					xcb->input.mouse_y = xcb->window_h / 2;
+
+    					xcb_warp_pointer(
+        					xcb->connection,
+        					XCB_NONE,
+        					xcb->window,
+        					0, 0, 0, 0,
+        					xcb->window_w / 2, xcb->window_h / 2);
+    					xcb_flush(xcb->connection);
+
+					}
+					break;
+                }
 				case XCB_KEY_PRESS:
 				{
 					xcb_key_press_event_t* k_e = (xcb_key_press_event_t*)e;

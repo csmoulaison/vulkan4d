@@ -90,6 +90,9 @@ struct xcb_context xcb_init()
 		xcb.input.buttons[i].released = 0;
 	}
 
+	xcb.mouse_just_warped = false;
+	xcb.mouse_moved_yet = false;
+
 	// TODO - raw memory page allocation
 	xcb.memory_pool = malloc(MEMORY_POOL_BYTES);
 	xcb.memory_pool_bytes = MEMORY_POOL_BYTES;
