@@ -1,2 +1,5 @@
 #include "render_group.c"
+#include "input.c"
+#include "game_memory.c"
+#include "game_init.c"
 #include "game_loop.c"

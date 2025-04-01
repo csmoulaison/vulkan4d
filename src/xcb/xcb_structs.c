@@ -11,7 +11,10 @@ struct xcb_context
 	uint32_t            window_h;
 	xcb_key_symbols_t*  keysyms;
 
+	struct game_memory* memory_pool;
+	size_t memory_pool_bytes;
 
+	struct input_state  input;
 	struct render_group render_group;
 	struct vk_context   vk;
 };

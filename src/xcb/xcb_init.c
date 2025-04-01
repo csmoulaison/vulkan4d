@@ -1,3 +1,5 @@
+#define MEMORY_POOL_BYTES 1073741824
+
 VkResult xcb_create_surface_callback(struct vk_context* vk, void* context)
 {
 	struct xcb_context* xcb = (struct xcb_context*)context;
@@ -26,6 +28,7 @@ struct xcb_context xcb_init()
 	values[0] = 
 		XCB_EVENT_MASK_EXPOSURE | 
 		XCB_EVENT_MASK_KEY_PRESS | 
+		XCB_EVENT_MASK_KEY_RELEASE | 
 		XCB_EVENT_MASK_STRUCTURE_NOTIFY;
 	
 	xcb.window = xcb_generate_id(xcb.connection);
@@ -75,6 +78,23 @@ struct xcb_context xcb_init()
 	xcb.vk = vk_init(&xcb_platform);
 
 	xcb.running = true;
+
+	xcb.input.mouse_x = 0;
+	xcb.input.mouse_y = 0;
+	xcb.input.mouse_delta_x = 0;
+	xcb.input.mouse_delta_y = 0;
+	for(uint32_t i = 0; i < INPUT_BUTTONS_LEN; i++) 
+	{
+		xcb.input.buttons[i].held = 0;
+		xcb.input.buttons[i].pressed = 0;
+		xcb.input.buttons[i].released = 0;
+	}
+
+	// TODO - raw memory page allocation
+	xcb.memory_pool = malloc(MEMORY_POOL_BYTES);
+	xcb.memory_pool_bytes = MEMORY_POOL_BYTES;
+
+	game_init(xcb.memory_pool, xcb.memory_pool_bytes);
 
     if(clock_gettime(CLOCK_REALTIME, &xcb.time_prev))
     {

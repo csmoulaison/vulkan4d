@@ -34,7 +34,10 @@ void vk_loop(struct vk_context* vk, struct render_group* render_group)
 		memcpy(ubo.model, model, sizeof(mat4));
 		glm_rotate(ubo.model, render_group->t * radians(90.0f), (vec3){0.0f, 0.0f, 1.0f});
 
-		glm_lookat((vec3){2.0f, 2.0f, 2.0f}, (vec3){0.0f, 0.0f, 0.0f}, (vec3){0.0f, 0.0f, 1.0f}, ubo.view);
+		glm_lookat(
+    		render_group->camera_position.data, 
+    		render_group->camera_target.data,
+    		(vec3){0.0f, 1.0f, 0.0f}, ubo.view);
 
 		glm_perspective(radians(45.0f), (float)vk->swap_extent.width / (float)vk->swap_extent.height, 0.1f, 10.0f, ubo.proj);
 		ubo.proj[1][1] *= -1;
