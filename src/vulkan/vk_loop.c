@@ -27,7 +27,6 @@ void insert_image_memory_barrier(
 
 void vk_loop(struct vk_context* vk, struct render_group* render_group)
 {
-	printf("t: %f\n", render_group->t);
 	// Create UBO
 	struct vk_ubo ubo = {};
 	{
@@ -43,8 +42,6 @@ void vk_loop(struct vk_context* vk, struct render_group* render_group)
 	memcpy(vk->host_visible_mapped, &ubo, sizeof(ubo));
 
 	uint32_t image_idx;
-	// NOTE - we are setting the semaphore_image_available to be signaled when the
-	// image is acquired?
 	VkResult res = vkAcquireNextImageKHR(
 		vk->device, 
 		vk->swapchain, 
@@ -62,7 +59,6 @@ void vk_loop(struct vk_context* vk, struct render_group* render_group)
 	begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
 	vkBeginCommandBuffer(vk->command_buffer, &begin_info);
 	{
-		// Transferring image layout from UNDEFINED to COLOR_ATTACHMENT_OPTIMAL.
 		// TODO - We'll want one for the depth image as well.
 		insert_image_memory_barrier(
 			vk->command_buffer, 
@@ -149,8 +145,7 @@ void vk_loop(struct vk_context* vk, struct render_group* render_group)
 		}
 		vkCmdEndRendering(vk->command_buffer);
 
-		// Transferring image layout from UNDEFINED to COLOR_ATTACHMENT_OPTIMAL.
-		// TODO - We'll want one for the depth image as well.
+	// TODO - We'll want one for the depth image as well.
 		insert_image_memory_barrier(
 			vk->command_buffer, 
 			vk->swap_images[image_idx], 

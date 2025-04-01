@@ -113,6 +113,9 @@ struct vk_create_swapchain_result vk_create_swapchain(struct vk_context* vk, boo
 		vkDestroyImage(vk->device, vk->render_image, 0);
 		vkDestroyImageView(vk->device, vk->render_view, 0);
 		vkFreeMemory(vk->device, vk->render_image_memory, 0);
+
+		vkDestroySemaphore(vk->device, vk->semaphore_image_available, 0);
+		vkDestroySemaphore(vk->device, vk->semaphore_render_finished, 0);
 	}
 
 	// Query surface capabilities.
@@ -276,6 +279,7 @@ struct vk_create_swapchain_result vk_create_swapchain(struct vk_context* vk, boo
 
 	// Create render image view for multisampling
 	VkImageCreateInfo render_info = {};
+	render_info.sType 		  = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
 	render_info.imageType     = VK_IMAGE_TYPE_2D;
 	render_info.format        = result.surface_format.format;
 	render_info.extent        = (VkExtent3D){vk->swap_extent.width, vk->swap_extent.height, 1};
@@ -333,6 +337,25 @@ struct vk_create_swapchain_result vk_create_swapchain(struct vk_context* vk, boo
 	{
 		printf("Error %i: Failed to create render image view.\n", res);
 		PANIC();
+	}
+
+	// Create synchronization primitives
+	{
+		VkSemaphoreCreateInfo semaphore_info = {};
+		semaphore_info.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
+
+		VkResult res = vkCreateSemaphore(vk->device, &semaphore_info, 0, &vk->semaphore_image_available);
+		if(res != VK_SUCCESS)
+		{
+			printf("Error %i: Failed to create image available semaphore.\n", res);
+			PANIC();
+		}
+		res = vkCreateSemaphore(vk->device, &semaphore_info, 0, &vk->semaphore_render_finished);
+		if(res != VK_SUCCESS)
+		{
+			printf("Error %i: Failed to create render finished semaphore.\n", res);
+			PANIC();
+		}
 	}
 
 	return result;
@@ -827,26 +850,6 @@ struct vk_context vk_init(struct vk_platform* platform)
 		if(res != VK_SUCCESS)
 		{
 			printf("Error %i: Failed to allocate command buffer.\n", res);
-			PANIC();
-		}
-	}
-
-
-	// Create synchronization primitives
-	{
-		VkSemaphoreCreateInfo semaphore_info = {};
-		semaphore_info.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
-
-		VkResult res = vkCreateSemaphore(vk.device, &semaphore_info, 0, &vk.semaphore_image_available);
-		if(res != VK_SUCCESS)
-		{
-			printf("Error %i: Failed to create image available semaphore.\n", res);
-			PANIC();
-		}
-		res = vkCreateSemaphore(vk.device, &semaphore_info, 0, &vk.semaphore_render_finished);
-		if(res != VK_SUCCESS)
-		{
-			printf("Error %i: Failed to create render finished semaphore.\n", res);
 			PANIC();
 		}
 	}
