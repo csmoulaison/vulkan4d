@@ -5,6 +5,8 @@ void xcb_loop(struct xcb_context* xcb)
 	while(xcb->running)
 	{
     	input_reset_buttons(&xcb->input);
+    	xcb->input.mouse_delta_x = 0;
+    	xcb->input.mouse_delta_y = 0;
     	
 		xcb_generic_event_t* e;
 		while((e = xcb_poll_for_event(xcb->connection)))
@@ -19,10 +21,7 @@ void xcb_loop(struct xcb_context* xcb)
 				}
             	case XCB_MOTION_NOTIFY:
                 {
-                    break;
-
                     // TODO - implement properly
-                    printf("motion notify\n");
 					xcb_motion_notify_event_t* ev = (xcb_motion_notify_event_t*)e;
                     
 					if(xcb->mouse_just_warped) 

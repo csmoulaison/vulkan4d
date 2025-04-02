@@ -9,6 +9,8 @@
 #define XCB_D 0x0064
 
 #include <xcb/xcb.h>
+#include <xcb/xfixes.h>
+#include <xcb/xinput.h>
 #include <xcb/xcb_keysyms.h>
 #include <vulkan/vulkan_xcb.h>
 #include "xcb_structs.c"

@@ -22,7 +22,7 @@ CC=gcc
 EXE=vulkan4d
 SRC=src/xcb/xcb_main.c
 INCLUDE=src/
-LIBS="-lX11 -lX11-xcb -lm -lxcb -lxcb-keysyms -lvulkan"
+LIBS="-lX11 -lX11-xcb -lm -lxcb -lxcb-xfixes -lxcb-keysyms -lvulkan"
 FLAGS="-g -O3 -Wall"
 
 

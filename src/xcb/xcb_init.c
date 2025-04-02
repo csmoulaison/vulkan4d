@@ -29,6 +29,7 @@ struct xcb_context xcb_init()
 		XCB_EVENT_MASK_EXPOSURE | 
 		XCB_EVENT_MASK_KEY_PRESS | 
 		XCB_EVENT_MASK_KEY_RELEASE | 
+		XCB_EVENT_MASK_POINTER_MOTION | 
 		XCB_EVENT_MASK_STRUCTURE_NOTIFY;
 	
 	xcb.window = xcb_generate_id(xcb.connection);
@@ -44,6 +45,11 @@ struct xcb_context xcb_init()
 		xcb.screen->root_visual,
 		mask, values);
 	xcb_map_window(xcb.connection, xcb.window);
+
+	//XGrabPointer(x11.display, x11.window, 1, PointerMotionMask, GrabModeAsync, GrabModeAsync, x11.window, None, CurrentTime);
+	xcb_grab_pointer(xcb.connection, false, xcb.window, mask, XCB_GRAB_MODE_ASYNC, XCB_GRAB_MODE_ASYNC, XCB_NONE, XCB_NONE, XCB_CURRENT_TIME);
+	xcb_xfixes_query_version(xcb.connection, 4, 0);
+	xcb_xfixes_hide_cursor(xcb.connection, xcb.window);
 
 	xcb_flush(xcb.connection);
 
