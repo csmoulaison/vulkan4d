@@ -75,13 +75,6 @@ struct vk_create_swapchain_result
 
 struct vk_vertex
 {
-	struct v2 pos;
+	struct v3 pos;
 	struct v3 color;
-};
-
-#define VERTEX_INPUT_ATTR_LEN 2
-struct vk_vertex_input_descriptions
-{
-	VkVertexInputBindingDescription   binding;
-	VkVertexInputAttributeDescription attributes[VERTEX_INPUT_ATTR_LEN];
 };

@@ -229,9 +229,9 @@ struct vk_create_swapchain_result vk_create_swapchain(struct vk_context* vk, boo
 	info.clipped               = VK_TRUE;
 	info.oldSwapchain          = VK_NULL_HANDLE;
 
-	#ifdef VK_IMMEDIATE
+#if VK_IMMEDIATE
 		info.presentMode = VK_PRESENT_MODE_IMMEDIATE_KHR;
-	#endif
+#endif
 
 	VkResult res = vkCreateSwapchainKHR(vk->device, &info, 0, &vk->swapchain);
 	if(res != VK_SUCCESS) 
@@ -378,19 +378,19 @@ struct vk_context vk_init(struct vk_platform* platform)
 
 		uint32_t exts_len = platform->window_extensions_len;
 
-		#ifdef VK_DEBUG
+#if VK_DEBUG
 			exts_len++;
 			char* debug_ext = VK_EXT_DEBUG_UTILS_EXTENSION_NAME;
-		#endif
+#endif
 
 		const char* exts[exts_len];
 		for(int i = 0; i < platform->window_extensions_len; i++) {
 			exts[i] = platform->window_extensions[i];
 		}
 
-		#ifdef VK_DEBUG
+#if VK_DEBUG
 			exts[exts_len - 1] = debug_ext;
-		#endif
+#endif
 
 		VkInstanceCreateInfo info = {};
 		info.sType            = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
@@ -406,9 +406,9 @@ struct vk_context vk_init(struct vk_platform* platform)
 
 		const char* layers[layers_len];
 
-		#ifdef VK_DEBUG
+#if VK_DEBUG
 			layers[layers_len - 1] = "VK_LAYER_KHRONOS_validation";
-		#endif
+#endif
 
 		info.enabledLayerCount = layers_len;
 		info.ppEnabledLayerNames = layers;
@@ -689,25 +689,45 @@ struct vk_context vk_init(struct vk_platform* platform)
 	{
 		VkShaderModule shader_vert = vk_create_shader_module(vk.device, "shaders/vert.spv");
 		VkShaderModule shader_frag = vk_create_shader_module(vk.device, "shaders/frag.spv");
-		VkPipelineShaderStageCreateInfo vert_info = {};
-		vert_info.sType  = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-		vert_info.stage  = VK_SHADER_STAGE_VERTEX_BIT;
-		vert_info.module = shader_vert;
-		vert_info.pName  = "main";
-		VkPipelineShaderStageCreateInfo frag_info = {};
-		frag_info.sType  = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-		frag_info.stage  = VK_SHADER_STAGE_FRAGMENT_BIT;
-		frag_info.module = shader_frag;
-		frag_info.pName  = "main";
-		// TODO - Length must equal pipeline_info.stageCount
-		VkPipelineShaderStageCreateInfo shader_infos[2] = {vert_info, frag_info};
+
+		size_t shader_infos_len = 2;
+		VkPipelineShaderStageCreateInfo shader_infos[shader_infos_len] = {};
+
+		shader_infos[0].sType  = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+		shader_infos[0].stage  = VK_SHADER_STAGE_VERTEX_BIT;
+		shader_infos[0].module = shader_vert;
+		shader_infos[0].pName  = "main";
+
+		shader_infos[1].sType  = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+		shader_infos[1].stage  = VK_SHADER_STAGE_FRAGMENT_BIT;
+		shader_infos[1].module = shader_frag;
+		shader_infos[1].pName  = "main";
+
+		size_t bind_descriptions_len = 1;
+		VkVertexInputBindingDescription bind_descriptions[bind_descriptions_len] = {};
+		bind_descriptions[0].binding   = 0;
+		bind_descriptions[0].stride    = sizeof(struct vk_vertex);
+		bind_descriptions[0].inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
+
+		size_t attr_descriptions_len = 2;
+		VkVertexInputAttributeDescription attr_descriptions[attr_descriptions_len] = {};
+
+		attr_descriptions[0].binding  = 0;
+		attr_descriptions[0].location = 0;
+		attr_descriptions[0].format   = VK_FORMAT_R32G32B32_SFLOAT;
+		attr_descriptions[0].offset   = offsetof(struct vk_vertex, pos);
+
+		attr_descriptions[1].binding  = 0;
+		attr_descriptions[1].location = 1;
+		attr_descriptions[1].format   = VK_FORMAT_R32G32B32_SFLOAT;
+		attr_descriptions[1].offset   = offsetof(struct vk_vertex, color);
 
 		VkPipelineVertexInputStateCreateInfo vert_input_info = {};
 		vert_input_info.sType                           = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
-		vert_input_info.vertexBindingDescriptionCount   = 1;
-		vert_input_info.pVertexBindingDescriptions      = &vk_vert_binding_descriptions.binding;
-		vert_input_info.vertexAttributeDescriptionCount = VERTEX_INPUT_ATTR_LEN;
-		vert_input_info.pVertexAttributeDescriptions    = vk_vert_binding_descriptions.attributes;
+		vert_input_info.vertexBindingDescriptionCount   = bind_descriptions_len;
+		vert_input_info.pVertexBindingDescriptions      = bind_descriptions;
+		vert_input_info.vertexAttributeDescriptionCount = attr_descriptions_len;
+		vert_input_info.pVertexAttributeDescriptions    = attr_descriptions;
 
 		VkPipelineInputAssemblyStateCreateInfo input_assembly_info = {};
 		input_assembly_info.sType                  = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
@@ -812,7 +832,7 @@ struct vk_context vk_init(struct vk_platform* platform)
 		pipeline_info.pDepthStencilState  = 0;
 		pipeline_info.pDynamicState       = &dynamic_info;
 		pipeline_info.pVertexInputState   = &vert_input_info;
-		pipeline_info.stageCount          = 2;
+		pipeline_info.stageCount          = shader_infos_len;
 		pipeline_info.pStages             = shader_infos;
 		pipeline_info.layout              = vk.pipeline_layout;
 

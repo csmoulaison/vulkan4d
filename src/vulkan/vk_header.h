@@ -1,5 +1,5 @@
 #define VK_DEBUG 1
-#define VK_IMMEDIATE 1
+#define VK_IMMEDIATE 0
 
 #define MAX_SWAP_IMAGES 4
 #define MAX_IN_FLIGHT_FRAMES 2

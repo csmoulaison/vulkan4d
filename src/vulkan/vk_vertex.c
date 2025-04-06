@@ -1,36 +1,56 @@
-#define VERTICES_LEN 4
-struct vk_vertex vertices[VERTICES_LEN] =
-{
-	{{{{-0.5f, -0.5f}}}, {{{ 1.0f,  0.0f,  0.0f}}}},
-    {{{{ 0.5f, -0.5f}}}, {{{ 0.0f,  1.0f,  0.0f}}}},
-    {{{{ 0.5f,  0.5f}}}, {{{ 0.0f,  0.0f,  1.0f}}}},
-    {{{{-0.5f,  0.5f}}}, {{{ 1.0f,  1.0f,  1.0f}}}}
+// TODO - We actually don't need this many vertices. Maybe not worth fixing
+// before moving on, but figured it's worth mentioning.
+#define VERTICES_LEN 24
+struct vk_vertex vertices[VERTICES_LEN] = {
+    {{{{-0.5f,  0.5f, -0.5f}}}, {{{ 1.0f, 0.0f, 0.0f}}}},
+    {{{{ 0.5f,  0.5f, -0.5f}}}, {{{ 0.0f, 1.0f, 0.0f}}}},
+    {{{{ 0.5f, -0.5f, -0.5f}}}, {{{ 0.0f, 0.0f, 1.0f}}}},
+    {{{{-0.5f, -0.5f, -0.5f}}}, {{{ 0.0f, 0.0f, 0.0f}}}}, 
+
+    {{{{-0.5f, -0.5f,  0.5f}}}, {{{ 1.0f, 0.0f, 0.0f}}}},
+    {{{{ 0.5f, -0.5f,  0.5f}}}, {{{ 0.0f, 1.0f, 0.0f}}}},
+    {{{{ 0.5f,  0.5f,  0.5f}}}, {{{ 0.0f, 0.0f, 1.0f}}}},
+    {{{{-0.5f,  0.5f,  0.5f}}}, {{{ 0.0f, 0.0f, 0.0f}}}},
+
+    {{{{-0.5f,  0.5f,  0.5f}}}, {{{ 1.0f, 0.0f, 0.0f}}}},
+    {{{{-0.5f,  0.5f, -0.5f}}}, {{{ 0.0f, 1.0f, 0.0f}}}},
+    {{{{-0.5f, -0.5f, -0.5f}}}, {{{ 0.0f, 0.0f, 1.0f}}}},
+    {{{{-0.5f, -0.5f,  0.5f}}}, {{{ 0.0f, 0.0f, 0.0f}}}},
+
+    {{{{ 0.5f, -0.5f,  0.5f}}}, {{{ 1.0f, 0.0f, 0.0f}}}},
+    {{{{ 0.5f, -0.5f, -0.5f}}}, {{{ 0.0f, 1.0f, 0.0f}}}},
+    {{{{ 0.5f,  0.5f, -0.5f}}}, {{{ 0.0f, 0.0f, 1.0f}}}},
+    {{{{ 0.5f,  0.5f,  0.5f}}}, {{{ 0.0f, 0.0f, 0.0f}}}},
+
+    {{{{-0.5f, -0.5f, -0.5f}}}, {{{ 1.0f, 0.0f, 0.0f}}}},
+    {{{{ 0.5f, -0.5f, -0.5f}}}, {{{ 0.0f, 1.0f, 0.0f}}}},
+    {{{{ 0.5f, -0.5f,  0.5f}}}, {{{ 0.0f, 0.0f, 1.0f}}}},
+    {{{{-0.5f, -0.5f,  0.5f}}}, {{{ 0.0f, 0.0f, 0.0f}}}},
+
+    {{{{-0.5f,  0.5f,  0.5f}}}, {{{ 1.0f, 0.0f, 0.0f}}}},
+    {{{{ 0.5f,  0.5f,  0.5f}}}, {{{ 0.0f, 1.0f, 0.0f}}}},
+    {{{{ 0.5f,  0.5f, -0.5f}}}, {{{ 0.0f, 0.0f, 1.0f}}}},
+    {{{{-0.5f,  0.5f, -0.5f}}}, {{{ 0.0f, 0.0f, 0.0f}}}}
 };
 
-#define INDICES_LEN 6
-uint16_t indices[INDICES_LEN] = {0, 1, 2, 2, 3, 0};
-
-struct vk_vertex_input_descriptions vk_vert_binding_descriptions =
+#define INDICES_LEN 36
+uint16_t indices[INDICES_LEN] = 
 {
-	.binding = 
-	{
-		.binding = 0,
-		.stride = sizeof(struct vk_vertex),
-		.inputRate = VK_VERTEX_INPUT_RATE_VERTEX
-	},
-	.attributes = 
-	{
-		{
-			.binding = 0,
-			.location = 0,
-			.format = VK_FORMAT_R32G32_SFLOAT,
-			.offset = offsetof(struct vk_vertex, pos)
-		},
-		{
-			.binding = 0,
-			.location = 1,
-			.format = VK_FORMAT_R32G32B32_SFLOAT,
-			.offset = offsetof(struct vk_vertex, color)
-		}
-	}
+	0, 1, 2, 
+	2, 3, 0,
+
+	4, 5, 6, 
+	6, 7, 4,
+
+	 8,  9, 10, 
+	10, 11,  8,
+
+	12, 13, 14, 
+	14, 15, 12,
+
+	16, 17, 18, 
+	18, 19, 16,
+
+	20, 21, 22, 
+	22, 23, 20,
 };

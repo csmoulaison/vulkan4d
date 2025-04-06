@@ -1,6 +1,6 @@
 #define MAX_NETWORK_LINES 4
-#define CAM_MOVE_SPEED 4.0f
-#define CAM_LOOK_SPEED 12.0f
+#define CAM_MOVE_SPEED 8.0f
+#define CAM_LOOK_SPEED 4.0f
 
 void game_loop(
     void* mem,
