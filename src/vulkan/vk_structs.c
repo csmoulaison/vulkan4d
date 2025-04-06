@@ -1,16 +1,23 @@
+#define MAX_INSTANCES 1024
+
 // TODO - Our own m4 struct
 // TODO - I figure optimally, we probably want to precompute proj * view every
 // frame as our uniform buffer, then push the model as a push constant.
-struct vk_ubo
+struct vk_ubo_global
 {
-	alignas(16) mat4 model;
 	alignas(16) mat4 view;
 	alignas(16) mat4 proj;
 };
 
+struct vk_ubo_instance
+{
+	alignas(16) mat4 models[MAX_INSTANCES];
+};
+
 struct vk_host_memory
 {
-	struct vk_ubo ubo;
+	struct vk_ubo_global global;
+	struct vk_ubo_instance instance;
 };
 
 struct vk_context

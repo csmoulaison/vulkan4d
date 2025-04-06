@@ -27,23 +27,28 @@ void insert_image_memory_barrier(
 
 void vk_loop(struct vk_context* vk, struct render_group* render_group)
 {
-	// Create UBO
-	struct vk_ubo ubo = {};
+	// Create UBOs
+	struct vk_host_memory mem = {};
 	{
-		mat4 model = GLM_MAT4_IDENTITY_INIT;
-		memcpy(ubo.model, model, sizeof(mat4));
-		glm_rotate(ubo.model, render_group->t * radians(90.0f), (vec3){0.0f, 0.0f, 1.0f});
+		for(int i = 0; i < MAX_INSTANCES; i++)
+		{
+			mat4 model = GLM_MAT4_IDENTITY_INIT;
+			memcpy(mem.instance.models[i], model, sizeof(mat4));
+			glm_translate(mem.instance.models[i], (vec3){(float)i * 2, 0.0f, 0.0f});
+			glm_rotate(mem.instance.models[i], render_group->t * radians(90.0f) * (float)(i + 1) * 2, (vec3){0.0f, 1.0f, 1.0f});
+		}
 
 		glm_lookat(
     		render_group->camera_position.data, 
     		render_group->camera_target.data,
     		(vec3){0.0f, 1.0f, 0.0f}, 
-    		ubo.view);
+    		mem.global.view);
 
-		glm_perspective(radians(45.0f), (float)vk->swap_extent.width / (float)vk->swap_extent.height, 0.1f, 100.0f, ubo.proj);
-		ubo.proj[1][1] *= -1;
+		glm_perspective(radians(45.0f), (float)vk->swap_extent.width / (float)vk->swap_extent.height, 0.1f, 100.0f, mem.global.proj);
+		mem.global.proj[1][1] *= -1;
 	}
-	memcpy(vk->host_visible_mapped, &ubo, sizeof(ubo));
+	memcpy(vk->host_visible_mapped, &mem, sizeof(mem));
+
 
 	uint32_t image_idx;
 	VkResult res = vkAcquireNextImageKHR(
@@ -135,17 +140,20 @@ void vk_loop(struct vk_context* vk, struct render_group* render_group)
 				vk->index_buffer_offset, 
 				VK_INDEX_TYPE_UINT16);
 
-			vkCmdBindDescriptorSets(
-				vk->command_buffer, 
-				VK_PIPELINE_BIND_POINT_GRAPHICS, 
-				vk->pipeline_layout, 
-				0, 
-				1, 
-				&vk->descriptor_set,
-				0,
-				0);
-			
-			vkCmdDrawIndexed(vk->command_buffer, INDICES_LEN, 1, 0, 0, 0);
+			for(uint16_t i = 0; i < MAX_INSTANCES; i++) {
+				uint32_t dyn_off = i * sizeof(mat4);
+				vkCmdBindDescriptorSets(
+					vk->command_buffer, 
+					VK_PIPELINE_BIND_POINT_GRAPHICS, 
+					vk->pipeline_layout, 
+					0, 
+					1, 
+					&vk->descriptor_set,
+					1,
+					&dyn_off);
+
+				vkCmdDrawIndexed(vk->command_buffer, INDICES_LEN, 1, 0, 0, 0);
+			}
 		}
 		vkCmdEndRendering(vk->command_buffer);
 

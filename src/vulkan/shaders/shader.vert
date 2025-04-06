@@ -5,15 +5,16 @@ layout(location = 1) in vec3 in_color;
 
 layout(location = 0) out vec3 frag_color;
 
-layout(binding = 0) uniform UniformBufferObject {
-	mat4 model;
+layout(binding = 0) uniform ubo_global {
 	mat4 view;
 	mat4 proj;
-} ubo;
+} global;
 
-//layout(binding = 1) uniform vec2 model[5]
+layout(binding = 1) uniform ubo_inst {
+	mat4 model;
+} inst;
 
 void main() {
-    gl_Position = ubo.proj * ubo.view * ubo.model * vec4(in_pos, 1.0);
+    gl_Position = global.proj * global.view * inst.model * vec4(in_pos, 1.0);
     frag_color = in_color;
 }

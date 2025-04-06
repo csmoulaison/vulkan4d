@@ -620,16 +620,25 @@ struct vk_context vk_init(struct vk_platform* platform)
 
 	// Create descriptor set layout, pool, and sets.
 	{
-		VkDescriptorSetLayoutBinding ubo_binding = {};
-		ubo_binding.binding         = 0;
-		ubo_binding.descriptorType  = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-		ubo_binding.descriptorCount = 1;
-		ubo_binding.stageFlags      = VK_SHADER_STAGE_VERTEX_BIT;
+		uint8_t ubo_bindings_len = 2;
+		VkDescriptorSetLayoutBinding ubo_bindings[ubo_bindings_len] = {};
+
+		// Global ubo
+		ubo_bindings[0].binding         = 0;
+		ubo_bindings[0].descriptorType  = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+		ubo_bindings[0].descriptorCount = 1;
+		ubo_bindings[0].stageFlags      = VK_SHADER_STAGE_VERTEX_BIT;
+
+		// Instance ubo
+		ubo_bindings[1].binding         = 1;
+		ubo_bindings[1].descriptorType  = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC;
+		ubo_bindings[1].descriptorCount = 1;
+		ubo_bindings[1].stageFlags      = VK_SHADER_STAGE_VERTEX_BIT;
 
 		VkDescriptorSetLayoutCreateInfo layout_info = {};
 		layout_info.sType        = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-		layout_info.bindingCount = 1;
-		layout_info.pBindings    = &ubo_binding;
+		layout_info.bindingCount = ubo_bindings_len;
+		layout_info.pBindings    = ubo_bindings;
 
 		VkResult res = vkCreateDescriptorSetLayout(vk.device, &layout_info, 0, &vk.descriptor_layout);
 		if(res != VK_SUCCESS)
@@ -638,14 +647,19 @@ struct vk_context vk_init(struct vk_platform* platform)
 			PANIC();
 		}
 
-		VkDescriptorPoolSize pool_size = {};
-		pool_size.type            = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-		pool_size.descriptorCount = 1;
+		uint8_t pool_sizes_len = 2;
+		VkDescriptorPoolSize pool_sizes[pool_sizes_len] = {};
+
+		pool_sizes[0].type            = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+		pool_sizes[0].descriptorCount = 1;
+
+		pool_sizes[1].type            = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC;
+		pool_sizes[1].descriptorCount = 1;
 
 		VkDescriptorPoolCreateInfo pool_info = {};
 		pool_info.sType         = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
-		pool_info.poolSizeCount = 1;
-		pool_info.pPoolSizes    = &pool_size;
+		pool_info.poolSizeCount = pool_sizes_len;
+		pool_info.pPoolSizes    = pool_sizes;
 		pool_info.maxSets       = 1;
 
 		res = vkCreateDescriptorPool(vk.device, &pool_info, 0, &vk.descriptor_pool);
@@ -668,21 +682,37 @@ struct vk_context vk_init(struct vk_platform* platform)
 			PANIC();
 		}
 
-		VkDescriptorBufferInfo buf_info = {};
-		buf_info.buffer = vk.host_visible_buffer;
-		buf_info.offset = 0;
-		buf_info.range  = sizeof(struct vk_host_memory);
+		VkDescriptorBufferInfo buf_info_global = {};
+		buf_info_global.buffer = vk.host_visible_buffer;
+		buf_info_global.offset = offsetof(struct vk_host_memory, global);
+		buf_info_global.range  = sizeof(struct vk_ubo_global);
 
-		VkWriteDescriptorSet desc_write = {};
-		desc_write.sType           = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-		desc_write.dstSet          = vk.descriptor_set;
-		desc_write.dstBinding      = 0;
-		desc_write.dstArrayElement = 0;
-		desc_write.descriptorType  = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-		desc_write.descriptorCount = 1;
-		desc_write.pBufferInfo     = &buf_info;
+		VkDescriptorBufferInfo buf_info_inst = {};
+		buf_info_inst.buffer = vk.host_visible_buffer;
+		buf_info_inst.offset = offsetof(struct vk_host_memory, instance);
+		//buf_info_inst.range  = sizeof(struct vk_ubo_instance);
+		buf_info_inst.range  = sizeof(mat4);
 
-		vkUpdateDescriptorSets(vk.device, 1, &desc_write, 0, 0);
+		uint8_t write_descriptors_len = 2;
+		VkWriteDescriptorSet write_descriptors[write_descriptors_len] = {};
+
+		write_descriptors[0].sType           = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+		write_descriptors[0].dstSet          = vk.descriptor_set;
+		write_descriptors[0].dstBinding      = 0;
+		write_descriptors[0].dstArrayElement = 0;
+		write_descriptors[0].descriptorType  = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+		write_descriptors[0].descriptorCount = 1;
+		write_descriptors[0].pBufferInfo     = &buf_info_global;
+
+		write_descriptors[1].sType           = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+		write_descriptors[1].dstSet          = vk.descriptor_set;
+		write_descriptors[1].dstBinding      = 1;
+		write_descriptors[1].dstArrayElement = 0;
+		write_descriptors[1].descriptorType  = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC;
+		write_descriptors[1].descriptorCount = 1;
+		write_descriptors[1].pBufferInfo     = &buf_info_inst;
+
+		vkUpdateDescriptorSets(vk.device, write_descriptors_len, write_descriptors, 0, 0);
 	}
 	
 	// Create graphics pipeline.
@@ -690,7 +720,7 @@ struct vk_context vk_init(struct vk_platform* platform)
 		VkShaderModule shader_vert = vk_create_shader_module(vk.device, "shaders/vert.spv");
 		VkShaderModule shader_frag = vk_create_shader_module(vk.device, "shaders/frag.spv");
 
-		size_t shader_infos_len = 2;
+		uint8_t shader_infos_len = 2;
 		VkPipelineShaderStageCreateInfo shader_infos[shader_infos_len] = {};
 
 		shader_infos[0].sType  = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
@@ -703,13 +733,13 @@ struct vk_context vk_init(struct vk_platform* platform)
 		shader_infos[1].module = shader_frag;
 		shader_infos[1].pName  = "main";
 
-		size_t bind_descriptions_len = 1;
+		uint8_t bind_descriptions_len = 1;
 		VkVertexInputBindingDescription bind_descriptions[bind_descriptions_len] = {};
 		bind_descriptions[0].binding   = 0;
 		bind_descriptions[0].stride    = sizeof(struct vk_vertex);
 		bind_descriptions[0].inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
 
-		size_t attr_descriptions_len = 2;
+		uint8_t attr_descriptions_len = 2;
 		VkVertexInputAttributeDescription attr_descriptions[attr_descriptions_len] = {};
 
 		attr_descriptions[0].binding  = 0;
