@@ -36,7 +36,10 @@ VkShaderModule vk_create_shader_module(VkDevice device, const char* fname)
 	return module;
 }
 
-uint32_t vk_get_memory_type(struct vk_context* vk, uint32_t type_filter, VkMemoryPropertyFlags properties)
+uint32_t vk_get_memory_type(
+	struct vk_context*    vk, 
+	uint32_t              type_filter, 
+	VkMemoryPropertyFlags properties)
 {
 	VkPhysicalDeviceMemoryProperties mem_properties;
 	vkGetPhysicalDeviceMemoryProperties(vk->physical_device, &mem_properties);
@@ -55,11 +58,11 @@ uint32_t vk_get_memory_type(struct vk_context* vk, uint32_t type_filter, VkMemor
 }
 
 void vk_allocate_buffer(
-	struct vk_context* vk,
-	VkBuffer* buffer,
-	VkDeviceMemory* memory,
-	VkDeviceSize size, 
-	VkBufferUsageFlags usage, 
+	struct vk_context*    vk,
+	VkBuffer*             buffer,
+	VkDeviceMemory*       memory,
+	VkDeviceSize          size, 
+	VkBufferUsageFlags    usage, 
 	VkMemoryPropertyFlags properties)
 {
 	VkBufferCreateInfo buf_info = {};
@@ -97,7 +100,81 @@ void vk_allocate_buffer(
 	vkBindBufferMemory(vk->device, *buffer, *memory, 0);
 }
 
-struct vk_create_swapchain_result vk_create_swapchain(struct vk_context* vk, bool recreate)
+void vk_create_image_resources(
+	struct vk_context* vk,
+	VkImageView*       view,
+	VkImage*           image,
+	VkDeviceMemory*    memory,
+	VkFormat           format,
+	VkImageUsageFlags  usage_mask,
+	VkImageAspectFlags aspect_mask)
+{
+	// Create render image view for multisampling
+	VkImageCreateInfo image_info = {};
+	image_info.sType 		 = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+	image_info.imageType     = VK_IMAGE_TYPE_2D;
+	image_info.format        = format;
+	image_info.extent        = (VkExtent3D){vk->swap_extent.width, vk->swap_extent.height, 1};
+	image_info.mipLevels     = 1;
+	image_info.arrayLayers   = 1;
+	image_info.samples       = vk->render_samples;
+	image_info.tiling        = VK_IMAGE_TILING_OPTIMAL;
+	image_info.usage         = usage_mask;
+	image_info.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+
+	VkResult res = vkCreateImage(vk->device, &image_info, 0, image);
+	if(res != VK_SUCCESS) 
+	{
+		printf("Error %i: Failed to create image.\n", res);
+		PANIC();
+	}
+
+	VkMemoryRequirements mem_reqs = {};
+	vkGetImageMemoryRequirements(vk->device, *image, &mem_reqs);
+
+	VkMemoryAllocateInfo alloc_info = {};
+	alloc_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+	alloc_info.allocationSize = mem_reqs.size;
+	alloc_info.memoryTypeIndex = vk_get_memory_type(
+		vk,
+		mem_reqs.memoryTypeBits, 
+		VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+
+	res = vkAllocateMemory(vk->device, &alloc_info, 0, memory);
+	if(res != VK_SUCCESS) 
+	{
+		printf("Error %i: Failed to allocate image memory..\n", res);
+		PANIC();
+	}
+	res = vkBindImageMemory(vk->device, *image, *memory, 0);
+	if(res != VK_SUCCESS) 
+	{
+		printf("Error %i: Failed to bind image memory.\n", res);
+		PANIC();
+	}
+
+	VkImageViewCreateInfo view_info = {};
+	view_info.sType                           = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+	view_info.image                           = *image;
+	view_info.viewType                        = VK_IMAGE_VIEW_TYPE_2D;
+	view_info.format                          = format;
+	view_info.subresourceRange.aspectMask     = aspect_mask;
+	view_info.subresourceRange.baseMipLevel   = 0;
+	view_info.subresourceRange.levelCount     = 1;
+	view_info.subresourceRange.baseArrayLayer = 0;
+	view_info.subresourceRange.layerCount     = 1;
+
+	res = vkCreateImageView(vk->device, &view_info, 0, view);
+	if(res != VK_SUCCESS) 
+	{
+		printf("Error %i: Failed to create image view.\n", res);
+		PANIC();
+	}
+}
+
+struct vk_create_swapchain_result vk_create_swapchain(
+	struct vk_context* vk, 
+	bool               recreate)
 {
 	struct vk_create_swapchain_result result;
 
@@ -258,6 +335,7 @@ struct vk_create_swapchain_result vk_create_swapchain(struct vk_context* vk, boo
 	// Create image views.
 	for(int i = 0; i < vk->swap_images_len; i++) 
 	{
+		// TODO - should we factor this into a create image view function?
 		VkImageViewCreateInfo info = {};
 		info.sType                           = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
 		info.image                           = vk->swap_images[i];
@@ -277,7 +355,27 @@ struct vk_create_swapchain_result vk_create_swapchain(struct vk_context* vk, boo
 		}
 	}
 
-	// Create render image view for multisampling
+	// Create render image resources for multisampling
+	vk_create_image_resources(
+		vk, 
+		&vk->render_view,
+		&vk->render_image,
+		&vk->render_image_memory,
+		result.surface_format.format,
+		VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT,
+		VK_IMAGE_ASPECT_COLOR_BIT);
+
+	// Create image resources for depth buffering
+	vk_create_image_resources(
+		vk, 
+		&vk->depth_view,
+		&vk->depth_image,
+		&vk->depth_image_memory,
+		DEPTH_ATTACHMENT_FORMAT,
+		VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
+		VK_IMAGE_ASPECT_DEPTH_BIT);
+
+	/* START DELETE
 	VkImageCreateInfo render_info = {};
 	render_info.sType 		  = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
 	render_info.imageType     = VK_IMAGE_TYPE_2D;
@@ -338,6 +436,8 @@ struct vk_create_swapchain_result vk_create_swapchain(struct vk_context* vk, boo
 		printf("Error %i: Failed to create render image view.\n", res);
 		PANIC();
 	}
+
+	// END DELETE */
 
 	// Create synchronization primitives
 	{
@@ -830,6 +930,14 @@ struct vk_context vk_init(struct vk_platform* platform)
 		color_blend_info.blendConstants[2] = 0.0f;
 		color_blend_info.blendConstants[3] = 0.0f;
 
+		VkPipelineDepthStencilStateCreateInfo depth_stencil_info = {};
+		depth_stencil_info.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
+		depth_stencil_info.depthTestEnable = VK_TRUE;
+		depth_stencil_info.depthWriteEnable = VK_TRUE;
+		depth_stencil_info.depthCompareOp = VK_COMPARE_OP_LESS;
+		depth_stencil_info.depthBoundsTestEnable = VK_FALSE;
+		depth_stencil_info.stencilTestEnable = VK_FALSE;
+
 		VkPipelineLayoutCreateInfo pipeline_layout_info = {};
 		pipeline_layout_info.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
 		pipeline_layout_info.setLayoutCount = 1;
@@ -847,7 +955,7 @@ struct vk_context vk_init(struct vk_platform* platform)
 		pipeline_render_info.pNext                   = VK_NULL_HANDLE; 
 		pipeline_render_info.colorAttachmentCount    = 1; 
 		pipeline_render_info.pColorAttachmentFormats = &surface_format.format; 
-		pipeline_render_info.depthAttachmentFormat   = 0; // TODO - is this okay if not depth buffering?
+		pipeline_render_info.depthAttachmentFormat   = DEPTH_ATTACHMENT_FORMAT;
 		pipeline_render_info.stencilAttachmentFormat = 0;
 
 		VkGraphicsPipelineCreateInfo pipeline_info = {};
@@ -859,7 +967,7 @@ struct vk_context vk_init(struct vk_platform* platform)
 		pipeline_info.pColorBlendState    = &color_blend_info;
 		pipeline_info.pMultisampleState   = &multisample_info;
 		pipeline_info.pViewportState      = &viewport_info;
-		pipeline_info.pDepthStencilState  = 0;
+		pipeline_info.pDepthStencilState  = &depth_stencil_info;
 		pipeline_info.pDynamicState       = &dynamic_info;
 		pipeline_info.pVertexInputState   = &vert_input_info;
 		pipeline_info.stageCount          = shader_infos_len;

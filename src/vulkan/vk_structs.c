@@ -37,6 +37,10 @@ struct vk_context
 	VkDeviceMemory        render_image_memory;
 	VkSampleCountFlagBits render_samples;
 
+	VkImageView           depth_view;
+	VkImage               depth_image;
+	VkDeviceMemory        depth_image_memory;
+
 	VkSwapchainKHR        swapchain;
 	VkExtent2D            swap_extent;
 	VkImageView           swap_views[MAX_SWAP_IMAGES];
