@@ -68,6 +68,9 @@ struct vk_context
 
 	VkSemaphore           semaphore_image_available;
 	VkSemaphore           semaphore_render_finished;
+
+	VkImage               texture_image;
+	VkDeviceMemory        texture_memory;
 };
 
 struct vk_platform

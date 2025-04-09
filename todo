@@ -1,0 +1,26 @@
+Base Vulkan stuff
+* Texture mapping
+* Mip-mapping if low scope
+* Before forking all this around - refactor init to eliminate unneeded nesting.
+
+Pathtracer for 4d - 3d stopgap
+* Compute shader to texture
+* Compute shader ray trace with hardcoded scene description
+* UBO(?) scene description
+
+4d pathtracing
+* Compute shader to voxel grid - all on the GPU
+* Do it on a different timeline
+* 4d pathtracing
+* Basic scene
+* Walk controls
+* Control of 4d stuff via mouse look or something
+* Finish game and whatnot
+
+Pathtracer for monster maze
+* Ray tracing extensions (research perf when not HW accelerated).
+* Render directly to swapchain without any rasterization. 
+* Hardcode scene example.
+* Start generating.
+* Pathtraced audio, taking advantage of simplicity of the maze environment.
+* Finish game and whatnot

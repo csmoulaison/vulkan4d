@@ -6,8 +6,13 @@
 #define DEPTH_ATTACHMENT_FORMAT VK_FORMAT_D32_SFLOAT
 
 #include <vulkan/vulkan.h>
+
+#define STB_IMAGE_IMPLEMENTATION
+#include "../extern/stb_image.h"
+
 #include "vk_structs.c"
-#include "vk_vertex.c"
+#include "vk_static_data.c"
+#include "vk_helpers.c"
 #include "vk_init.c"
 #include "vk_loop.c"
 
