@@ -8,6 +8,7 @@
 #include <vulkan/vulkan.h>
 
 #define STB_IMAGE_IMPLEMENTATION
+#define STBI_ONLY_BMP
 #include "../extern/stb_image.h"
 
 #include "vk_structs.c"
@@ -15,4 +16,3 @@
 #include "vk_helpers.c"
 #include "vk_init.c"
 #include "vk_loop.c"
-

@@ -808,6 +808,16 @@ struct vk_context vk_init(struct vk_platform* platform)
 			VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
 			VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 
+		// TODO - I'm copying this to do the texture image transition.
+		// I have two options, not sure at this point what makes sense, and it's late
+		// at night.
+		//   (ref: multiple_command_buffers)
+		// 
+		// 1. Only ever allocate one command buffer, or just do another for
+		// initialization. At any rate, I have no idea why I'm using a temp one for
+		// this at the moment.
+		// 2. If it makes sense to just be making temp command buffers like this, the
+		// process should at least be made into a function.
 		VkCommandBufferAllocateInfo alloc_info = {};
 		alloc_info.sType              = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
 		alloc_info.level              = VK_COMMAND_BUFFER_LEVEL_PRIMARY;

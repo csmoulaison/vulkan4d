@@ -1066,22 +1066,24 @@ static void *stbi__malloc_mad4(int a, int b, int c, int d, int add)
 }
 #endif
 
-// returns 1 if the sum of two signed ints is valid (between -2^31 and 2^31-1 inclusive), 0 on overflow.
+// CSM - Comment out to supress warning
+/* returns 1 if the sum of two signed ints is valid (between -2^31 and 2^31-1 inclusive), 0 on overflow.
 static int stbi__addints_valid(int a, int b)
 {
    if ((a >= 0) != (b >= 0)) return 1; // a and b have different signs, so no overflow
    if (a < 0 && b < 0) return a >= INT_MIN - b; // same as a + b >= INT_MIN; INT_MIN - b cannot overflow since b < 0.
    return a <= INT_MAX - b;
-}
+}*/
 
-// returns 1 if the product of two ints fits in a signed short, 0 on overflow.
+// CSM - Comment out to supress warning.
+/* returns 1 if the product of two ints fits in a signed short, 0 on overflow.
 static int stbi__mul2shorts_valid(int a, int b)
 {
    if (b == 0 || b == -1) return 1; // multiplication by 0 is always 0; check for -1 so SHRT_MIN/b doesn't overflow
    if ((a >= 0) == (b >= 0)) return a <= SHRT_MAX/b; // product is positive, so similar to mul2sizes_valid
    if (b < 0) return a <= SHRT_MIN / b; // same as a * b >= SHRT_MIN
    return a >= SHRT_MIN / b;
-}
+}*/
 
 // stbi__err - error
 // stbi__errpf - error returning pointer to float

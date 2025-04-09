@@ -247,4 +247,49 @@ void vk_allocate_texture(
 		VK_FORMAT_R8G8B8A8_SRGB,
 		VK_SAMPLE_COUNT_1_BIT,
 		VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT);
+
+	// See ref for note on this being redundant code.
+	//   (ref: multiple_command_buffers)
+	//   
+	// TODO - Also, generally. This has just been copy pasted without actually
+	// doing the image transfer
+	VkCommandBufferAllocateInfo alloc_info = {};
+	alloc_info.sType              = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+	alloc_info.level              = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+	alloc_info.commandPool        = vk.command_pool;
+	alloc_info.commandBufferCount = 1;
+
+	VkCommandBuffer cmd_buf;
+	vkAllocateCommandBuffers(vk.device, &alloc_info, &cmd_buf);
+
+	VkCommandBufferBeginInfo begin_info = {};
+	begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+	begin_info.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+
+	vkBeginCommandBuffer(cmd_buf, &begin_info);
+	{
+		VkBufferCopy copy = {};
+		copy.size = buf_size;
+		vkCmdCopyBuffer(cmd_buf, staging_buf, vk.device_local_buffer, 1, &copy);
+	}
+	vkEndCommandBuffer(cmd_buf);
+
+	VkSubmitInfo submit_info = {};
+	submit_info.sType              = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+	submit_info.commandBufferCount = 1;
+	submit_info.pCommandBuffers    = &cmd_buf;
+
+	// TODO - We are using the graphics queue for this presently, but might we
+	// want to use a transfer queue for this?
+	// I'm not sure if there's any possible performance boost, and I'd rather not
+	// do it just for the sake of it.
+	// 
+	// High level on how this might be done at the following link:
+	// https://vulkan-tutorial.com/Vertex_buffers/Staging_buffer
+	vkQueueSubmit(vk.queue_graphics, 1, &submit_info, VK_NULL_HANDLE);
+	vkQueueWaitIdle(vk.queue_graphics);
+
+	vkFreeCommandBuffers(vk.device, vk.command_pool, 1, &cmd_buf);
+	vkDestroyBuffer(vk.device, staging_buf, 0);
+	vkFreeMemory(vk.device, staging_buf_mem, 0);
 }
